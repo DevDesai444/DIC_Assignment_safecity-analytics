@@ -5,7 +5,7 @@
 - **Course:** Data-Intensive Computing (Spring 2026)  
 - **Assignment No.:** Assignment 1 (Project Phase 1)  
 - **Project Title:** SafeCity Analytics: LA Crime Data Analysis  
-- **Instructor:** `<<ADD INSTRUCTOR NAME>>`  
+- **Instructor:** Dr. Justice Del Vacio 
 - **Team Members:**  
   - Harsh Mahesh Tikone  
   - Dev Desai  
