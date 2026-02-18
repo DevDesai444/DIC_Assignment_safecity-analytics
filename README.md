@@ -3,7 +3,7 @@
 # Team Members 
 1. Harsh Mahesh Tikone
 2. Dev Desai
-3. Shwetangi Singh
+3. Shwetangi 
 
 ## Project Overview
 Analysis of crime data from 2020 to present.
