@@ -17,7 +17,7 @@
 
 | Deliverable | Link / File |
 |---|---|
-| **Phase 1 Report (Google Doc)** | [View Report]([https://docs.google.com/document/d/1IfdWrU0ViWzt-P31DnCWtzFBuykYbGcUl0mOn432MX8/edit?usp=sharing](https://docs.google.com/document/d/1oYahBmjBAiVArPI48sZtJC_sIqrrbvFXyusX9ByZsmY/edit?usp=sharing)) |
+| **Phase 1 Report (Google Doc)** | [View Report](https://docs.google.com/document/d/1oYahBmjBAiVArPI48sZtJC_sIqrrbvFXyusX9ByZsmY/edit?usp=sharing) |
 | **Workshop Slides** | `LA_Crime_Data_Analysis.pptx` |
 
 ---
