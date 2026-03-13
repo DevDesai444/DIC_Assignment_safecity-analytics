@@ -274,7 +274,11 @@ async def call_tool(name: str, arguments: dict):
         )
 
     if name == "list_crime_categories":
-        return _text("Predictable crime categories:\n" + "\n".join(f"  - {c}" for c in crime_classes))
+        categories = sorted(crime_classes)
+        return _text(
+            f"Predictable crime categories ({len(categories)}):\n"
+            + "\n".join(f"  - {c}" for c in categories)
+        )
 
     if name == "predict_crime_category":
         # ── input validation ──────────────────────────────────────────────────
