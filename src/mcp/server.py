@@ -163,6 +163,10 @@ crime_classes = list(encoders["Crime Category"].classes_)
 server = Server("safecity-crime-predictor")
 
 
+def _text(message: str):
+    return [types.TextContent(type="text", text=message)]
+
+
 @server.list_tools()
 async def list_tools():
     return [
@@ -242,10 +246,7 @@ async def list_tools():
 @server.call_tool()
 async def call_tool(name: str, arguments: dict):
     if name == "list_crime_categories":
-        return [types.TextContent(
-            type="text",
-            text="Predictable crime categories:\n" + "\n".join(f"  - {c}" for c in crime_classes)
-        )]
+        return _text("Predictable crime categories:\n" + "\n".join(f"  - {c}" for c in crime_classes))
 
     if name == "predict_crime_category":
         # ── input validation ──────────────────────────────────────────────────
@@ -261,18 +262,18 @@ async def call_tool(name: str, arguments: dict):
             part = int(arguments["part_1_2"])
             delay = int(arguments["reporting_delay_days"])
         except (KeyError, ValueError) as e:
-            return [types.TextContent(type="text", text=f"Input error: {e}")]
+            return _text(f"Input error: {e}")
 
         if not (AREA_MIN <= area <= AREA_MAX):
-            return [types.TextContent(type="text", text=f"Input error: area must be {AREA_MIN}..{AREA_MAX}")]
+            return _text(f"Input error: area must be {AREA_MIN}..{AREA_MAX}")
         if not (HOUR_MIN <= hour <= HOUR_MAX):
-            return [types.TextContent(type="text", text=f"Input error: hour must be {HOUR_MIN}..{HOUR_MAX}")]
+            return _text(f"Input error: hour must be {HOUR_MIN}..{HOUR_MAX}")
         if not (MONTH_MIN <= month <= MONTH_MAX):
-            return [types.TextContent(type="text", text=f"Input error: month must be {MONTH_MIN}..{MONTH_MAX}")]
+            return _text(f"Input error: month must be {MONTH_MIN}..{MONTH_MAX}")
         if part not in (1, 2):
-            return [types.TextContent(type="text", text="Input error: part_1_2 must be 1 or 2")]
+            return _text("Input error: part_1_2 must be 1 or 2")
         if delay < 0:
-            return [types.TextContent(type="text", text="Input error: reporting_delay_days must be >= 0")]
+            return _text("Input error: reporting_delay_days must be >= 0")
 
         # Validate categorical values
         for val, valid_list, label in [
@@ -281,10 +282,7 @@ async def call_tool(name: str, arguments: dict):
             (severity, severity_classes, "severity"),
         ]:
             if val not in valid_list:
-                return [types.TextContent(
-                    type="text",
-                    text=f"Invalid {label}: '{val}'. Must be one of {valid_list}"
-                )]
+                return _text(f"Invalid {label}: '{val}'. Must be one of {valid_list}")
 
         # ── encode categoricals ───────────────────────────────────────────────
         premise_enc  = encoders["Premise Category"].transform([premise])[0]
@@ -313,9 +311,9 @@ async def call_tool(name: str, arguments: dict):
             f"**Predicted Crime Category:** {pred_label}\n\n"
             f"**Top 3 Predictions:**\n" + "\n".join(f"  {i+1}. {t}" for i, t in enumerate(top3))
         )
-        return [types.TextContent(type="text", text=result)]
+        return _text(result)
 
-    return [types.TextContent(type="text", text=f"Unknown tool: {name}")]
+    return _text(f"Unknown tool: {name}")
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────
