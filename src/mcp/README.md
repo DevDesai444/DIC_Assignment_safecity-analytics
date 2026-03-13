@@ -26,6 +26,14 @@ If the second command shows `Status: Connected`, the server is ready.
 python3 src/data_cleaning.py
 ```
 
+## Quick Health Check
+
+After adding the MCP server, ask Claude Code to call:
+
+- `server_health`
+- `list_crime_categories`
+- `predict_crime_category` (with any valid test payload)
+
 ## Remove Server
 
 ```bash
