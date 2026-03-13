@@ -1,7 +1,7 @@
 import pickle
-import os
 import sys
 from pathlib import Path
+from typing import Any
 
 # ── MCP import ────────────────────────────────────────────────────────────────
 try:
@@ -12,26 +12,149 @@ except ImportError:
     print("ERROR: mcp package not installed. Run: pip install mcp", file=sys.stderr)
     sys.exit(1)
 
-# ── Load model ────────────────────────────────────────────────────────────────
-MODEL_PATH = Path(__file__).parent.parent.parent / "models" / "random_forest_model.pkl"
+# ── Paths / constants ─────────────────────────────────────────────────────────
+ROOT = Path(__file__).resolve().parents[2]
+MODEL_PATH = ROOT / "models" / "random_forest_model.pkl"
+FALLBACK_MODEL_PATH = ROOT / "models" / "decision_tree_model.pkl"
+CLEANED_DATA_PATH = ROOT / "data" / "processed" / "crime_data_cleaned.csv"
+RANDOM_SEED = 42
 
-if not MODEL_PATH.exists():
-    print(f"ERROR: Model not found at {MODEL_PATH}. Run train_random_forest.py first.",
-          file=sys.stderr)
+
+def _validate_bundle(bundle: dict[str, Any], source: Path) -> None:
+    required = {"model", "encoders", "feature_names"}
+    missing = required - set(bundle.keys())
+    if missing:
+        raise ValueError(f"{source} missing required keys: {sorted(missing)}")
+    if not hasattr(bundle["model"], "predict"):
+        raise ValueError(f"{source} model object has no predict()")
+    if not hasattr(bundle["model"], "predict_proba"):
+        raise ValueError(f"{source} model object has no predict_proba()")
+
+
+def _load_bundle_from_path(path: Path) -> dict[str, Any]:
+    with open(path, "rb") as f:
+        bundle = pickle.load(f)
+    _validate_bundle(bundle, path)
+    return bundle
+
+
+def _train_fallback_random_forest() -> dict[str, Any]:
+    """
+    Build a compact, inference-ready RandomForest bundle if the serialized model
+    is missing or corrupted (common with partial LFS downloads).
+    """
+    print("Building fallback Random Forest model for MCP server...", file=sys.stderr)
+
+    # Local imports keep startup dependencies minimal unless fallback is needed.
+    import numpy as np
+    import pandas as pd
+    from sklearn.ensemble import RandomForestClassifier
+
+    model_src = ROOT / "src" / "models"
+    if str(model_src) not in sys.path:
+        sys.path.append(str(model_src))
+    from preprocess import load_data, get_classification_features  # noqa: WPS433
+
+    if not CLEANED_DATA_PATH.exists():
+        raise FileNotFoundError(
+            f"Cleaned data not found at {CLEANED_DATA_PATH}. "
+            "Run src/data_cleaning.py first."
+        )
+
+    df = load_data(str(CLEANED_DATA_PATH))
+    X, y_category, _, feature_names, encoders = get_classification_features(df)
+
+    # Align with training scripts by dropping ultra-rare classes.
+    class_counts = pd.Series(y_category).value_counts()
+    valid_classes = class_counts[class_counts >= 5].index
+    mask = np.isin(y_category, valid_classes)
+    X = X[mask]
+    y_category = y_category[mask]
+
+    rf = RandomForestClassifier(
+        n_estimators=150,
+        max_depth=20,
+        min_samples_split=10,
+        min_samples_leaf=2,
+        max_features="sqrt",
+        class_weight="balanced",
+        random_state=RANDOM_SEED,
+        n_jobs=-1,
+    )
+    rf.fit(X, y_category)
+
+    bundle = {
+        "model": rf,
+        "encoders": encoders,
+        "feature_names": feature_names,
+        "best_params": {
+            "source": "server_fallback_training",
+            "random_state": RANDOM_SEED,
+            "n_estimators": 150,
+            "max_depth": 20,
+            "min_samples_split": 10,
+            "min_samples_leaf": 2,
+            "max_features": "sqrt",
+            "class_weight": "balanced",
+        },
+    }
+
+    MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with open(MODEL_PATH, "wb") as f:
+        pickle.dump(bundle, f, protocol=pickle.HIGHEST_PROTOCOL)
+    print(f"Saved rebuilt model bundle -> {MODEL_PATH}", file=sys.stderr)
+    return bundle
+
+
+def _load_or_rebuild_bundle() -> dict[str, Any]:
+    if MODEL_PATH.exists():
+        try:
+            bundle = _load_bundle_from_path(MODEL_PATH)
+            print(f"Loaded model bundle from {MODEL_PATH}", file=sys.stderr)
+            return bundle
+        except Exception as exc:  # noqa: BLE001
+            print(
+                f"WARNING: Could not load {MODEL_PATH} ({exc}). Attempting rebuild...",
+                file=sys.stderr,
+            )
+
+    try:
+        return _train_fallback_random_forest()
+    except Exception as exc:  # noqa: BLE001
+        print(f"WARNING: Fallback training failed: {exc}", file=sys.stderr)
+
+    if FALLBACK_MODEL_PATH.exists():
+        try:
+            bundle = _load_bundle_from_path(FALLBACK_MODEL_PATH)
+            print(
+                f"Using decision-tree fallback bundle from {FALLBACK_MODEL_PATH}",
+                file=sys.stderr,
+            )
+            return bundle
+        except Exception as exc:  # noqa: BLE001
+            print(
+                f"WARNING: Could not load {FALLBACK_MODEL_PATH} ({exc})",
+                file=sys.stderr,
+            )
+
+    print(
+        "ERROR: No usable model bundle available. "
+        "Run src/models/train_random_forest.py to generate one.",
+        file=sys.stderr,
+    )
     sys.exit(1)
 
-with open(MODEL_PATH, "rb") as f:
-    bundle = pickle.load(f)
 
-model        = bundle["model"]
-encoders     = bundle["encoders"]
+bundle = _load_or_rebuild_bundle()
+model = bundle["model"]
+encoders = bundle["encoders"]
 feature_names = bundle["feature_names"]
 
 # Pre-extract encoder maps for validation
-premise_classes  = list(encoders["Premise Category"].classes_)
+premise_classes = list(encoders["Premise Category"].classes_)
 timebucket_classes = list(encoders["TimeBucket"].classes_)
 severity_classes = list(encoders["Severity"].classes_)
-crime_classes    = list(encoders["Crime Category"].classes_)
+crime_classes = list(encoders["Crime Category"].classes_)
 
 # ── MCP Server ────────────────────────────────────────────────────────────────
 server = Server("safecity-crime-predictor")
@@ -118,24 +241,35 @@ async def call_tool(name: str, arguments: dict):
     if name == "list_crime_categories":
         return [types.TextContent(
             type="text",
-            text="Predictable crime categories:\n" + "\n".join(f"  • {c}" for c in crime_classes)
+            text="Predictable crime categories:\n" + "\n".join(f"  - {c}" for c in crime_classes)
         )]
 
     if name == "predict_crime_category":
         # ── input validation ──────────────────────────────────────────────────
         try:
-            area      = int(arguments["area"])
-            hour      = int(arguments["hour"])
-            month     = int(arguments["month"])
+            area = int(arguments["area"])
+            hour = int(arguments["hour"])
+            month = int(arguments["month"])
             is_weekend = int(bool(arguments["is_weekend"]))
             has_weapon = int(bool(arguments["has_weapon"]))
-            premise   = arguments["premise_category"]
+            premise = arguments["premise_category"]
             timebucket = arguments["time_bucket"]
-            severity   = arguments["severity"]
-            part       = int(arguments["part_1_2"])
-            delay      = int(arguments["reporting_delay_days"])
+            severity = arguments["severity"]
+            part = int(arguments["part_1_2"])
+            delay = int(arguments["reporting_delay_days"])
         except (KeyError, ValueError) as e:
             return [types.TextContent(type="text", text=f"Input error: {e}")]
+
+        if not (1 <= area <= 21):
+            return [types.TextContent(type="text", text="Input error: area must be 1..21")]
+        if not (0 <= hour <= 23):
+            return [types.TextContent(type="text", text="Input error: hour must be 0..23")]
+        if not (1 <= month <= 12):
+            return [types.TextContent(type="text", text="Input error: month must be 1..12")]
+        if part not in (1, 2):
+            return [types.TextContent(type="text", text="Input error: part_1_2 must be 1 or 2")]
+        if delay < 0:
+            return [types.TextContent(type="text", text="Input error: reporting_delay_days must be >= 0")]
 
         # Validate categorical values
         for val, valid_list, label in [
@@ -160,12 +294,15 @@ async def call_tool(name: str, arguments: dict):
         ]]
 
         # ── predict ───────────────────────────────────────────────────────────
-        pred_idx   = model.predict(features)[0]
+        pred_idx = model.predict(features)[0]
         pred_label = encoders["Crime Category"].inverse_transform([pred_idx])[0]
-        probas     = model.predict_proba(features)[0]
-        top3_idx   = probas.argsort()[-3:][::-1]
+        probas = model.predict_proba(features)[0]
+        top3_idx = probas.argsort()[-3:][::-1]
         top3 = [
-            f"{encoders['Crime Category'].inverse_transform([i])[0]}: {probas[i]*100:.1f}%"
+            (
+                f"{encoders['Crime Category'].inverse_transform([int(model.classes_[i])])[0]}: "
+                f"{probas[i]*100:.1f}%"
+            )
             for i in top3_idx
         ]
 
