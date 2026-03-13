@@ -18,6 +18,9 @@ MODEL_PATH = ROOT / "models" / "random_forest_model.pkl"
 FALLBACK_MODEL_PATH = ROOT / "models" / "decision_tree_model.pkl"
 CLEANED_DATA_PATH = ROOT / "data" / "processed" / "crime_data_cleaned.csv"
 RANDOM_SEED = 42
+AREA_MIN, AREA_MAX = 1, 21
+HOUR_MIN, HOUR_MAX = 0, 23
+MONTH_MIN, MONTH_MAX = 1, 12
 
 
 def _validate_bundle(bundle: dict[str, Any], source: Path) -> None:
@@ -175,17 +178,17 @@ async def list_tools():
                     "area": {
                         "type": "integer",
                         "description": "LAPD area code (1–21)",
-                        "minimum": 1, "maximum": 21
+                        "minimum": AREA_MIN, "maximum": AREA_MAX
                     },
                     "hour": {
                         "type": "integer",
                         "description": "Hour of day (0–23)",
-                        "minimum": 0, "maximum": 23
+                        "minimum": HOUR_MIN, "maximum": HOUR_MAX
                     },
                     "month": {
                         "type": "integer",
                         "description": "Month (1–12)",
-                        "minimum": 1, "maximum": 12
+                        "minimum": MONTH_MIN, "maximum": MONTH_MAX
                     },
                     "is_weekend": {
                         "type": "boolean",
@@ -260,12 +263,12 @@ async def call_tool(name: str, arguments: dict):
         except (KeyError, ValueError) as e:
             return [types.TextContent(type="text", text=f"Input error: {e}")]
 
-        if not (1 <= area <= 21):
-            return [types.TextContent(type="text", text="Input error: area must be 1..21")]
-        if not (0 <= hour <= 23):
-            return [types.TextContent(type="text", text="Input error: hour must be 0..23")]
-        if not (1 <= month <= 12):
-            return [types.TextContent(type="text", text="Input error: month must be 1..12")]
+        if not (AREA_MIN <= area <= AREA_MAX):
+            return [types.TextContent(type="text", text=f"Input error: area must be {AREA_MIN}..{AREA_MAX}")]
+        if not (HOUR_MIN <= hour <= HOUR_MAX):
+            return [types.TextContent(type="text", text=f"Input error: hour must be {HOUR_MIN}..{HOUR_MAX}")]
+        if not (MONTH_MIN <= month <= MONTH_MAX):
+            return [types.TextContent(type="text", text=f"Input error: month must be {MONTH_MIN}..{MONTH_MAX}")]
         if part not in (1, 2):
             return [types.TextContent(type="text", text="Input error: part_1_2 must be 1 or 2")]
         if delay < 0:
