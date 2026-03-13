@@ -167,6 +167,12 @@ def _text(message: str):
     return [types.TextContent(type="text", text=message)]
 
 
+def _validate_choice(value: str, valid_values: list[str], label: str) -> str | None:
+    if value not in valid_values:
+        return f"Invalid {label}: '{value}'. Must be one of {valid_values}"
+    return None
+
+
 @server.list_tools()
 async def list_tools():
     return [
@@ -294,8 +300,9 @@ async def call_tool(name: str, arguments: dict):
             (timebucket, timebucket_classes, "time_bucket"),
             (severity, severity_classes, "severity"),
         ]:
-            if val not in valid_list:
-                return _text(f"Invalid {label}: '{val}'. Must be one of {valid_list}")
+            error = _validate_choice(val, valid_list, label)
+            if error:
+                return _text(error)
 
         # ── encode categoricals ───────────────────────────────────────────────
         premise_enc  = encoders["Premise Category"].transform([premise])[0]
