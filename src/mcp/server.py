@@ -173,6 +173,15 @@ def _validate_choice(value: str, valid_values: list[str], label: str) -> str | N
     return None
 
 
+def _format_top_predictions(probabilities, top_indices):
+    top3 = []
+    for idx in top_indices:
+        class_id = int(model.classes_[idx])
+        class_name = encoders["Crime Category"].inverse_transform([class_id])[0]
+        top3.append(f"{class_name}: {probabilities[idx]*100:.1f}%")
+    return top3
+
+
 @server.list_tools()
 async def list_tools():
     return [
@@ -319,13 +328,7 @@ async def call_tool(name: str, arguments: dict):
         pred_label = encoders["Crime Category"].inverse_transform([pred_idx])[0]
         probas = model.predict_proba(features)[0]
         top3_idx = probas.argsort()[-3:][::-1]
-        top3 = [
-            (
-                f"{encoders['Crime Category'].inverse_transform([int(model.classes_[i])])[0]}: "
-                f"{probas[i]*100:.1f}%"
-            )
-            for i in top3_idx
-        ]
+        top3 = _format_top_predictions(probas, top3_idx)
 
         result = (
             f"**Predicted Crime Category:** {pred_label}\n\n"
