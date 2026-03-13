@@ -109,12 +109,12 @@ def _train_fallback_random_forest() -> dict[str, Any]:
     return bundle
 
 
-def _load_or_rebuild_bundle() -> dict[str, Any]:
+def _load_or_rebuild_bundle() -> tuple[dict[str, Any], str]:
     if MODEL_PATH.exists():
         try:
             bundle = _load_bundle_from_path(MODEL_PATH)
             print(f"Loaded model bundle from {MODEL_PATH}", file=sys.stderr)
-            return bundle
+            return bundle, str(MODEL_PATH)
         except Exception as exc:  # noqa: BLE001
             print(
                 f"WARNING: Could not load {MODEL_PATH} ({exc}). Attempting rebuild...",
@@ -122,7 +122,7 @@ def _load_or_rebuild_bundle() -> dict[str, Any]:
             )
 
     try:
-        return _train_fallback_random_forest()
+        return _train_fallback_random_forest(), "fallback_retrain"
     except Exception as exc:  # noqa: BLE001
         print(f"WARNING: Fallback training failed: {exc}", file=sys.stderr)
 
@@ -133,7 +133,7 @@ def _load_or_rebuild_bundle() -> dict[str, Any]:
                 f"Using decision-tree fallback bundle from {FALLBACK_MODEL_PATH}",
                 file=sys.stderr,
             )
-            return bundle
+            return bundle, str(FALLBACK_MODEL_PATH)
         except Exception as exc:  # noqa: BLE001
             print(
                 f"WARNING: Could not load {FALLBACK_MODEL_PATH} ({exc})",
@@ -148,7 +148,7 @@ def _load_or_rebuild_bundle() -> dict[str, Any]:
     sys.exit(1)
 
 
-bundle = _load_or_rebuild_bundle()
+bundle, model_source = _load_or_rebuild_bundle()
 model = bundle["model"]
 encoders = bundle["encoders"]
 feature_names = bundle["feature_names"]
@@ -240,11 +240,24 @@ async def list_tools():
             description="List all crime categories the model can predict.",
             inputSchema={"type": "object", "properties": {}}
         ),
+        types.Tool(
+            name="server_health",
+            description="Return model/source metadata for MCP diagnostics.",
+            inputSchema={"type": "object", "properties": {}}
+        ),
     ]
 
 
 @server.call_tool()
 async def call_tool(name: str, arguments: dict):
+    if name == "server_health":
+        return _text(
+            "SafeCity MCP server is healthy.\n"
+            f"Model source: {model_source}\n"
+            f"Classes available: {len(getattr(model, 'classes_', []))}\n"
+            f"Feature count: {len(feature_names)}"
+        )
+
     if name == "list_crime_categories":
         return _text("Predictable crime categories:\n" + "\n".join(f"  - {c}" for c in crime_classes))
 
