@@ -24,6 +24,59 @@
 
 ---
 
+## How to Use This Project (Quick Start)
+
+Run all commands from the project root (`DIC_Assignment_safecity-analytics/`).
+
+### 1) Install dependencies
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+### 2) Run Phase 1 (cleaning + EDA)
+
+```bash
+python3 src/data_cleaning.py
+python3 src/eda.py
+```
+
+- Cleaned dataset: `data/processed/crime_data_cleaned.csv`
+- Cleaning audit log: `data/cleaning_audit.json`
+- EDA plots: `data/processed/eda/plots/`
+
+### 3) Run Phase 2 (model training + comparison)
+
+```bash
+python3 src/models/train_knn.py
+python3 src/models/train_decision_tree.py
+python3 src/models/train_kmeans.py
+python3 src/models/train_naive_bayes.py
+python3 src/models/train_random_forest.py
+python3 src/models/train_logistic_regression.py
+python3 src/models/compare_algorithms.py
+```
+
+- Trained models: `models/`
+- Metrics/figures: `outputs/`
+
+### 4) Start MCP server
+
+```bash
+python3 src/mcp/server.py
+```
+
+### 5) Use MCP in Claude Code (optional)
+
+```bash
+claude mcp add -s project safecity-crime-predictor -- python3 src/mcp/server.py
+claude mcp get safecity-crime-predictor
+```
+
+---
+
 ## Repository Structure
 
 ```text
@@ -113,13 +166,12 @@ pip install -r requirements.txt
 
 **1. Data Cleaning:**
 ```bash
-cd src
-python data_cleaning.py
+python3 src/data_cleaning.py
 ```
 
 **2. Exploratory Data Analysis:**
 ```bash
-python eda.py
+python3 src/eda.py
 ```
 
 ---
@@ -233,13 +285,13 @@ pip install -r requirements.txt
 Run all scripts from the project root in this order:
 
 ```bash
-python src/models/train_knn.py
-python src/models/train_decision_tree.py
-python src/models/train_kmeans.py
-python src/models/train_naive_bayes.py
-python src/models/train_random_forest.py
-python src/models/train_logistic_regression.py
-python src/models/compare_algorithms.py
+python3 src/models/train_knn.py
+python3 src/models/train_decision_tree.py
+python3 src/models/train_kmeans.py
+python3 src/models/train_naive_bayes.py
+python3 src/models/train_random_forest.py
+python3 src/models/train_logistic_regression.py
+python3 src/models/compare_algorithms.py
 ```
 
 All plots are saved to `outputs/<algorithm>/` and all serialized models to `models/`.
@@ -248,13 +300,13 @@ All plots are saved to `outputs/<algorithm>/` and all serialized models to `mode
 
 ```bash
 # Step 1: Train Random Forest first (if not already done)
-python src/models/train_random_forest.py
+python3 src/models/train_random_forest.py
 
 # Step 2: Start the MCP server
-python src/mcp/server.py
+python3 src/mcp/server.py
 ```
 
-See `src/mcp/README.md` for Claude Desktop integration instructions.
+See `src/mcp/README.md` for Claude Code integration instructions.
 
 ---
 
