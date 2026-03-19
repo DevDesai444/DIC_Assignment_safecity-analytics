@@ -1,92 +1,161 @@
-import os, time
-import numpy as np
 import pandas as pd
+import numpy as np
+import time
+import pickle
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.model_selection import train_test_split, cross_val_score
+
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.metrics import (
-    classification_report, confusion_matrix, accuracy_score
+    accuracy_score,
+    confusion_matrix,
+    classification_report,
+    precision_score,
+    recall_score,
+    f1_score
 )
 from sklearn.preprocessing import StandardScaler
 
-import sys
-sys.path.append(os.path.dirname(__file__))
-from preprocess import load_data, get_classification_features
 
-RANDOM_SEED = 42
-np.random.seed(RANDOM_SEED)
-os.makedirs("models", exist_ok=True)
-os.makedirs("outputs/knn", exist_ok=True)
+# -----------------------------
+# Load Data
+# -----------------------------
+df = pd.read_csv("data/processed/cleaned_data.csv")
 
-print("Loading data...")
-df = load_data()
-X, _, y_severity, feature_names, encoders = get_classification_features(df)
+target = "Category"  # change if needed
+X = df.drop(columns=[target])
+y = df[target]
 
+feature_names = X.columns.tolist()
 
-scaler = StandardScaler()
-X_scaled = scaler.fit_transform(X)
-
-label_names = encoders["Severity"].classes_
-
+# -----------------------------
+# Train Test Split
+# -----------------------------
 X_train, X_test, y_train, y_test = train_test_split(
-    X_scaled, y_severity, test_size=0.2, random_state=RANDOM_SEED, stratify=y_severity
+    X, y, test_size=0.2, random_state=42
 )
 
-print("Tuning k (3–15, odd values)...")
-k_values = range(3, 16, 2)
+# -----------------------------
+# Scaling (VERY IMPORTANT for KNN)
+# -----------------------------
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+
+# -----------------------------
+# Hyperparameter Tuning (K)
+# -----------------------------
+k_values = list(range(1, 21))
 cv_scores = []
+test_scores = []
+
+print("Running K tuning...")
+
 for k in k_values:
-    knn = KNeighborsClassifier(n_neighbors=k, metric="euclidean", n_jobs=-1)
-    score = cross_val_score(knn, X_train, y_train, cv=5, scoring="accuracy").mean()
-    cv_scores.append(score)
-    print(f"  k={k:2d}  CV accuracy={score:.4f}")
+    model = KNeighborsClassifier(n_neighbors=k)
 
-best_k = list(k_values)[np.argmax(cv_scores)]
-print(f"\nBest k = {best_k}  (CV acc = {max(cv_scores):.4f})")
+    # Cross-validation
+    scores = cross_val_score(model, X_train, y_train, cv=5)
+    cv_scores.append(scores.mean())
 
-knn = KNeighborsClassifier(n_neighbors=best_k, metric="euclidean", n_jobs=-1)
-t0 = time.time()
+    # Test score
+    model.fit(X_train, y_train)
+    test_scores.append(model.score(X_test, y_test))
+
+best_k = k_values[np.argmax(cv_scores)]
+print(f"Best K: {best_k}")
+
+# -----------------------------
+# Train Final Model
+# -----------------------------
+knn = KNeighborsClassifier(n_neighbors=best_k)
+
+start = time.time()
 knn.fit(X_train, y_train)
-print(f"Training time: {time.time()-t0:.1f}s")
+end = time.time()
 
+print(f"Training Time: {end - start:.4f} seconds")
+
+# -----------------------------
+# Predictions
+# -----------------------------
 y_pred = knn.predict(X_test)
-acc = accuracy_score(y_test, y_pred)
-print(f"\nTest Accuracy: {acc:.4f}")
-print("\nClassification Report:")
-print(classification_report(y_test, y_pred, target_names=label_names))
 
-fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+# -----------------------------
+# Metrics
+# -----------------------------
+accuracy = accuracy_score(y_test, y_pred)
+precision = precision_score(y_test, y_pred, average='weighted')
+recall = recall_score(y_test, y_pred, average='weighted')
+f1 = f1_score(y_test, y_pred, average='weighted')
 
-axes[0].plot(list(k_values), cv_scores, marker="o", color="#2E86AB", linewidth=2)
-axes[0].axvline(best_k, color="red", linestyle="--", label=f"Best k={best_k}")
-axes[0].set_xlabel("k (number of neighbours)", fontsize=12)
-axes[0].set_ylabel("5-Fold CV Accuracy", fontsize=12)
-axes[0].set_title("kNN Hyperparameter Tuning", fontsize=14)
-axes[0].legend()
-axes[0].grid(True, alpha=0.3)
+print("Accuracy:", accuracy)
+print("Precision:", precision)
+print("Recall:", recall)
+print("F1 Score:", f1)
 
+train_acc = knn.score(X_train, y_train)
+test_acc = knn.score(X_test, y_test)
+
+print("Train Accuracy:", train_acc)
+print("Test Accuracy:", test_acc)
+
+# -----------------------------
+# Confusion Matrix
+# -----------------------------
 cm = confusion_matrix(y_test, y_pred)
-sns.heatmap(cm, annot=True, fmt="d", cmap="Blues",
-            xticklabels=label_names, yticklabels=label_names, ax=axes[1])
-axes[1].set_xlabel("Predicted", fontsize=12)
-axes[1].set_ylabel("Actual", fontsize=12)
-axes[1].set_title(f"kNN Confusion Matrix (k={best_k})", fontsize=14)
 
+plt.figure(figsize=(8,6))
+sns.heatmap(cm, annot=True, fmt="d", cmap="Blues")
+plt.title(f"KNN Confusion Matrix (k={best_k})")
+plt.xlabel("Predicted")
+plt.ylabel("Actual")
 plt.tight_layout()
-plt.savefig("outputs/knn/knn_results.png", dpi=150, bbox_inches="tight")
+plt.savefig("outputs/knn/knn_confusion_matrix.png")
 plt.close()
-print("Saved: outputs/knn/knn_results.png")
 
-report_dict = classification_report(
-    y_test, y_pred, target_names=label_names, output_dict=True
-)
-metrics_df = pd.DataFrame(report_dict).T.round(3)
+# -----------------------------
+# K vs Accuracy Plot
+# -----------------------------
+plt.figure(figsize=(8,6))
+plt.plot(k_values, cv_scores, label="CV Accuracy")
+plt.plot(k_values, test_scores, label="Test Accuracy")
+plt.axvline(best_k, color='red', linestyle='--', label=f"Best k={best_k}")
+plt.xlabel("K")
+plt.ylabel("Accuracy")
+plt.title("KNN Hyperparameter Tuning")
+plt.legend()
+plt.grid(True)
+plt.savefig("outputs/knn/knn_k_tuning.png")
+plt.close()
+
+# -----------------------------
+# Distance Metric Experiment
+# -----------------------------
+print("\nDistance Metric Comparison:")
+for metric in ["euclidean", "manhattan"]:
+    model = KNeighborsClassifier(n_neighbors=best_k, metric=metric)
+    model.fit(X_train, y_train)
+    acc = model.score(X_test, y_test)
+    print(f"{metric}: {acc:.4f}")
+
+# -----------------------------
+# Save Metrics
+# -----------------------------
+report_dict = classification_report(y_test, y_pred, output_dict=True)
+metrics_df = pd.DataFrame(report_dict).T
 metrics_df.to_csv("outputs/knn/knn_metrics.csv")
-print("Saved: outputs/knn/knn_metrics.csv")
 
-import pickle
+# -----------------------------
+# Save Model
+# -----------------------------
 with open("models/knn_model.pkl", "wb") as f:
-    pickle.dump({"model": knn, "scaler": scaler, "encoders": encoders,
-                 "feature_names": feature_names, "best_k": best_k}, f)
-print("Saved: models/knn_model.pkl")
+    pickle.dump({
+        "model": knn,
+        "scaler": scaler,
+        "features": feature_names,
+        "best_k": best_k
+    }, f)
+
+print("KNN model saved successfully.")
