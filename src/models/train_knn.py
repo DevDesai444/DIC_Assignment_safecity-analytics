@@ -21,7 +21,7 @@ from sklearn.preprocessing import StandardScaler
 # -----------------------------
 # Load Data
 # -----------------------------
-df = pd.read_csv("data/processed/cleaned_data.csv")
+df = pd.read_csv("data/processed/crime_data_cleaned.csv")
 
 target = "Category"  # change if needed
 X = df.drop(columns=[target])
