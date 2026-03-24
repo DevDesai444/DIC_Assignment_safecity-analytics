@@ -9,7 +9,7 @@
 - **Team Members:**  
   - Harsh Mahesh Tikone  
   - Dev Desai  
-  - Shwetangi  
+  - Shwetangi   
 
 ---
 
@@ -19,7 +19,7 @@
 |---|---|
 | **Phase 1 Report (Google Doc)** | [View Report](https://docs.google.com/document/d/1oYahBmjBAiVArPI48sZtJC_sIqrrbvFXyusX9ByZsmY/edit?usp=sharing) |
 | **Phase 1 Workshop Slides** | `LA_Crime_Data_Analysis.pptx` |
-| **Phase 2 Report (Google Doc)** | *(Add your Phase 2 Google Doc link here)* |
+| **Phase 2 Report (Google Doc)** | [View Report](https://docs.google.com/document/d/10sJOqEEXB30xsa94dIkb-TCN8guEs0muV1l9IHjfs6g/edit?tab=t.0) |
 | **Phase 2 Workshop Slides** | *(Add your Phase 2 slides link here)* |
 
 ---
@@ -375,9 +375,10 @@ All supervised models share a common feature set built in `preprocess.py`:
 
 The trained **Random Forest** model is deployed as an MCP (Model Context Protocol) server, making it callable from Claude Desktop or any MCP-compatible AI assistant.
 
-- **Exposed tool:** `predict_crime_category`
+- **Exposed tools:** `predict_crime_category`, `list_crime_categories`, `server_health`
 - **Input:** Area, hour, month, weekend flag, weapon flag, premise type, time bucket, severity, part classification, reporting delay
 - **Output:** Predicted crime category + top-3 probability breakdown
+- **Fallback:** If the model file is missing, the server retrains automatically from the cleaned CSV
 
 Full setup instructions: [`src/mcp/README.md`](src/mcp/README.md)
 
@@ -385,23 +386,21 @@ Full setup instructions: [`src/mcp/README.md`](src/mcp/README.md)
 
 ## Phase 2 Key Results
 
-*(Fill in after running the scripts)*
-
 ### Classification Performance
 
 | Algorithm | Target | Test Accuracy | Weighted F1 |
 |-----------|--------|--------------|-------------|
-| kNN (best k) | Severity | *(run to populate)* | *(run to populate)* |
-| Decision Tree | Crime Category | *(run to populate)* | *(run to populate)* |
-| Naive Bayes | Crime Category | *(run to populate)* | *(run to populate)* |
-| Random Forest | Crime Category | *(run to populate)* | *(run to populate)* |
-| Logistic Regression | Weapon Involved | *(run to populate)* | *(run to populate)* |
+| kNN (best k=3) | Severity | 0.9985 | 1.00 |
+| Decision Tree | Crime Category | 0.8246 | 0.81 |
+| Naive Bayes | Crime Category | 0.51 | 0.40 |
+| Random Forest | Crime Category | 0.81 | 0.81 |
+| Logistic Regression | Weapon Involved | 0.8674 | 0.89 |
 
 ### Clustering Performance
 
 | Algorithm | Best k | Silhouette Score |
 |-----------|--------|-----------------|
-| k-Means | *(run to populate)* | *(run to populate)* |
+| k-Means | 2 | 0.5456 |
 
 ---
 
@@ -425,7 +424,7 @@ We chose Random Forest for the MCP deployment over Decision Tree because it gene
 
 Logistic Regression was applied to weapon involvement (binary) rather than crime category. This added variety to the algorithm set and produced something genuinely useful — a calibrated probability score for weapon risk rather than just a category label.
 
-We chose ComplementNB over GaussianNB for the Naive Bayes model because it's designed for imbalanced multi-class problems, which fits our data well — Vehicle Crime makes up 35% of records while Homicide is under 0.02%.
+We chose ComplementNB over GaussianNB for the Naive Bayes model because it's designed for imbalanced multi-class problems, which fits our data well — Vehicle Crime makes up 46% of records while some categories are under 1%.
 
 For k-Means, we used both the elbow method and silhouette score together. The elbow method alone often gives ambiguous results; the silhouette score adds a measure of actual cluster separation, which helped us pick a k that was both efficient and meaningful.
 
@@ -436,7 +435,7 @@ For k-Means, we used both the elbow method and silhouette score together. The el
 - All random seeds are set to `42` across all Phase 2 scripts
 - `preprocess.py` provides a single shared feature pipeline used by all models
 - Run scripts in the order listed under **Running Phase 2** above
-- Verified on a fresh environment: confirmed by *(team member name)* on *(date)*
+- Verified on a fresh environment: confirmed by Harsh on 21st March.
 
 ---
 
