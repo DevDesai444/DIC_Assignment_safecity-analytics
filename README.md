@@ -9,7 +9,7 @@
 - **Team Members:**  
   - Harsh Mahesh Tikone  
   - Dev Desai  
-  - Shwetangi  
+  - Shwetangi   
 
 ---
 
@@ -19,7 +19,7 @@
 |---|---|
 | **Phase 1 Report (Google Doc)** | [View Report](https://docs.google.com/document/d/1oYahBmjBAiVArPI48sZtJC_sIqrrbvFXyusX9ByZsmY/edit?usp=sharing) |
 | **Phase 1 Workshop Slides** | `LA_Crime_Data_Analysis.pptx` |
-| **Phase 2 Report (Google Doc)** | *(Add your Phase 2 Google Doc link here)* |
+| **Phase 2 Report (Google Doc)** | [View Report](https://docs.google.com/document/d/10sJOqEEXB30xsa94dIkb-TCN8guEs0muV1l9IHjfs6g/edit?tab=t.0) |
 | **Phase 2 Workshop Slides** | *(Add your Phase 2 slides link here)* |
 
 ---
@@ -132,20 +132,18 @@ DIC_Assignment_safecity-analytics/
 
 ---
 
----
-
 # PHASE 1: Data Collection, Cleaning & EDA
 
 ---
 
 ## Phase 1 Overview
 
-Phase 1 implements the data ingestion, cleaning, and exploratory analysis steps of the data science pipeline using Python. The goal was to prepare a clean, analysis-ready dataset and surface key patterns in LA crime data to inform modeling decisions in Phase 2.
+Phase 1 covers the data ingestion, cleaning, and exploratory analysis steps of the pipeline. The goal was to get the raw LAPD crime data into a clean, analysis-ready state and surface enough patterns to guide our modeling choices in Phase 2.
 
-Primary dataset:
+We used a single primary dataset:
 - **Source:** [Crime Data from 2020 to Present (data.gov)](https://catalog.data.gov/dataset/crime-data-from-2020-to-present)
 - **File in repo:** `data/raw/crime_data_2024_to_present.csv`
-- **Scale:** ~62K rows (meets 50,000+ row requirement)
+- **Scale:** ~62K rows (meets the 50,000+ row requirement)
 
 ---
 
@@ -234,28 +232,39 @@ python3 src/eda.py
 
 ## Phase 1 Surprise Findings
 
-1. **High proportion of unknown victim data:** 48.5% of records have unknown victim demographics (age=0, sex=X), suggesting many crimes are reported without victim information (e.g., property crimes)
-2. **Low weapon usage:** Only 5.9% of crimes involve weapons, with "strong-arm" (physical force) being the most common
-3. **Quick reporting:** 75% of crimes are reported within 3 days, indicating relatively prompt reporting
+A few things caught us off guard during EDA.
+
+Nearly half the records (48.5%) had unknown victim demographics — age listed as 0, sex as X. This makes sense once you realize a lot of these are property crimes where no victim is directly identified at the scene, but it was still a bigger gap than we expected and shaped how we handled those fields downstream.
+
+Weapon involvement was also much lower than anticipated. Only 5.9% of crimes involved a weapon, and even then "strong-arm" (physical force, no weapon) was the most common type. This turned out to be useful — it meant predicting weapon involvement was a meaningful but tractable binary classification problem for Phase 2.
+
+On the positive side, reporting was faster than expected. Three-quarters of crimes were reported within 3 days, which suggests the data is relatively fresh and not heavily skewed by delayed reports.
 
 ---
 
 ## Phase 1 Dead Ends
 
-1. **Attempted crime analysis:** Initially tried to analyze attempted vs. completed crimes using crime codes, but the distinction was inconsistent across crime types and difficult to categorize reliably.
-2. **Seasonal trend analysis:** Attempted to analyze seasonal patterns, but the dataset only covers ~1 year (2024), making seasonal comparisons impossible.
-3. **Victim-offender relationship analysis:** The dataset doesn't include offender information or relationship data, preventing analysis of crime dynamics.
+Not everything we tried worked out.
+
+We initially tried to separate attempted crimes from completed ones using the crime codes, but the distinction was inconsistently applied across crime types and wasn't reliable enough to use as a feature or label.
+
+We also looked at seasonal trends but quickly realized the dataset only covers about one year (2024), so there wasn't enough history for meaningful seasonal analysis.
+
+Finally, we wanted to look at victim-offender relationships but the dataset simply doesn't include offender data, so that line of analysis wasn't possible.
 
 ---
 
 ## Phase 1 Design Decisions
 
-1. **Age handling:** Replaced age=0 with NaN rather than imputing, as 0 likely represents "unknown" rather than actual age
-2. **Crime categorization:** Created broad categories to simplify analysis of 140+ crime types while maintaining interpretability
-3. **Coordinate outliers:** Flagged rather than removed outliers to preserve data integrity
-4. **Visualization approach:** Used multiple chart types (bar, line, pie, scatter) to reveal different aspects of the data
+A few choices we made deliberately and why:
 
----
+We replaced age=0 with NaN rather than imputing a value — 0 almost certainly means "unknown" in this dataset, not an actual age, so filling it with a mean or median would have introduced noise.
+
+We grouped 140+ crime types into broader categories to keep the analysis readable and the models tractable. Fine-grained crime codes would have created a very sparse label space.
+
+For coordinate outliers, we flagged them rather than dropping them. Removing data points without a clear reason felt like the wrong call, and none of the flagged points turned out to be outside LA bounds anyway.
+
+For visualizations, we mixed chart types on purpose — bar charts for counts, line charts for trends, scatter plots for geography — because different structures in the data show up better in different chart types.
 
 ---
 
@@ -265,7 +274,7 @@ python3 src/eda.py
 
 ## Phase 2 Overview
 
-Phase 2 applies 6 ML and statistical algorithms to the cleaned dataset from Phase 1, produces visualizations and performance metrics for each, deploys one model as an MCP server, and compares algorithms head-to-head. All algorithm choices are tied directly to the use cases defined in Phase 1.
+Phase 2 takes the cleaned dataset from Phase 1 and applies six ML algorithms to it, each targeting a different question about crime in LA. We also deployed one model as an MCP server and did a head-to-head comparison of the algorithms.
 
 - **Input:** `data/processed/crime_data_cleaned.csv` (Phase 1 output)
 - **Scale:** ~62K rows, 46 features
@@ -366,9 +375,10 @@ All supervised models share a common feature set built in `preprocess.py`:
 
 The trained **Random Forest** model is deployed as an MCP (Model Context Protocol) server, making it callable from Claude Desktop or any MCP-compatible AI assistant.
 
-- **Exposed tool:** `predict_crime_category`
+- **Exposed tools:** `predict_crime_category`, `list_crime_categories`, `server_health`
 - **Input:** Area, hour, month, weekend flag, weapon flag, premise type, time bucket, severity, part classification, reporting delay
 - **Output:** Predicted crime category + top-3 probability breakdown
+- **Fallback:** If the model file is missing, the server retrains automatically from the cleaned CSV
 
 Full setup instructions: [`src/mcp/README.md`](src/mcp/README.md)
 
@@ -376,41 +386,47 @@ Full setup instructions: [`src/mcp/README.md`](src/mcp/README.md)
 
 ## Phase 2 Key Results
 
-*(Fill in after running the scripts)*
-
 ### Classification Performance
 
 | Algorithm | Target | Test Accuracy | Weighted F1 |
 |-----------|--------|--------------|-------------|
-| kNN (best k) | Severity | *(run to populate)* | *(run to populate)* |
-| Decision Tree | Crime Category | *(run to populate)* | *(run to populate)* |
-| Naive Bayes | Crime Category | *(run to populate)* | *(run to populate)* |
-| Random Forest | Crime Category | *(run to populate)* | *(run to populate)* |
-| Logistic Regression | Weapon Involved | *(run to populate)* | *(run to populate)* |
+| kNN (best k=3) | Severity | 0.9985 | 1.00 |
+| Decision Tree | Crime Category | 0.8246 | 0.81 |
+| Naive Bayes | Crime Category | 0.51 | 0.40 |
+| Random Forest | Crime Category | 0.81 | 0.81 |
+| Logistic Regression | Weapon Involved | 0.8674 | 0.89 |
 
 ### Clustering Performance
 
 | Algorithm | Best k | Silhouette Score |
 |-----------|--------|-----------------|
-| k-Means | *(run to populate)* | *(run to populate)* |
+| k-Means | 2 | 0.5456 |
 
 ---
 
 ## Phase 2 Dead Ends
 
-1. **SVM on full dataset** — Attempted Support Vector Machine for crime category classification but training time exceeded 30 minutes on the full 62K-row dataset even with `LinearSVC`. Downsampling was considered but would sacrifice representativeness of rare crime types. Abandoned in favour of Random Forest which trains faster and achieves higher accuracy at scale.
+Two approaches didn't work out and are worth documenting.
 
-2. **DBSCAN for geographic clustering** — Attempted density-based spatial clustering as an alternative to k-Means. DBSCAN labelled over 60% of points as noise (label = -1) due to the relatively uniform density of crime across LA. The resulting clusters were not geographically meaningful. Reverted to k-Means with silhouette-guided k selection.
+We tried SVM for crime category classification, but even `LinearSVC` took over 30 minutes on the full 62K-row dataset. Downsampling was an option but would have underrepresented rare crime types, which felt like the wrong trade-off. We switched to Random Forest, which trains faster and handles class imbalance more cleanly.
+
+We also tried DBSCAN for geographic clustering as an alternative to k-Means. It ended up labeling over 60% of points as noise because crime in LA is spread fairly uniformly across the city — there are no tight, isolated clusters for DBSCAN to latch onto. The results weren't geographically meaningful, so we went back to k-Means with silhouette-guided k selection.
 
 ---
 
 ## Phase 2 Design Decisions
 
-1. **Shared preprocessing module** (`preprocess.py`): All models draw from the same feature encoding pipeline to ensure consistent label encoding and avoid data leakage between scripts.
-2. **Random Forest for MCP deployment:** Chosen over Decision Tree because it generalises better and handles class imbalance, while still being fast enough for real-time inference.
-3. **Logistic Regression on weapon involvement:** Applied to a binary target (`Has Weapon`) rather than the same crime category as the tree-based models, to add variety and produce an actionable risk score.
-4. **ComplementNB over GaussianNB:** ComplementNB is designed for imbalanced multi-class problems, matching the skewed crime category distribution (Vehicle Crime = 35%, Homicide = 0.02%).
-5. **Silhouette + elbow for k-Means:** Using both metrics together avoids selecting a k that minimises inertia but produces poor cluster separation.
+A few deliberate choices worth explaining:
+
+We built a shared `preprocess.py` module that all six models pull from. This keeps feature encoding consistent across scripts and avoids the kind of subtle data leakage that can happen when each script does its own encoding independently.
+
+We chose Random Forest for the MCP deployment over Decision Tree because it generalizes better and handles class imbalance — important for a model that will be called at inference time with real inputs.
+
+Logistic Regression was applied to weapon involvement (binary) rather than crime category. This added variety to the algorithm set and produced something genuinely useful — a calibrated probability score for weapon risk rather than just a category label.
+
+We chose ComplementNB over GaussianNB for the Naive Bayes model because it's designed for imbalanced multi-class problems, which fits our data well — Vehicle Crime makes up 46% of records while some categories are under 1%.
+
+For k-Means, we used both the elbow method and silhouette score together. The elbow method alone often gives ambiguous results; the silhouette score adds a measure of actual cluster separation, which helped us pick a k that was both efficient and meaningful.
 
 ---
 
@@ -419,7 +435,7 @@ Full setup instructions: [`src/mcp/README.md`](src/mcp/README.md)
 - All random seeds are set to `42` across all Phase 2 scripts
 - `preprocess.py` provides a single shared feature pipeline used by all models
 - Run scripts in the order listed under **Running Phase 2** above
-- Verified on a fresh environment: confirmed by *(team member name)* on *(date)*
+- Verified on a fresh environment: confirmed by Harsh on 21st March.
 
 ---
 

@@ -5,11 +5,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.metrics import (
-    classification_report, confusion_matrix, accuracy_score
-)
+from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
 from sklearn.preprocessing import StandardScaler
-
 import sys
 sys.path.append(os.path.dirname(__file__))
 from preprocess import load_data, get_classification_features
@@ -23,17 +20,15 @@ print("Loading data...")
 df = load_data()
 X, _, y_severity, feature_names, encoders = get_classification_features(df)
 
-
 scaler = StandardScaler()
 X_scaled = scaler.fit_transform(X)
-
 label_names = encoders["Severity"].classes_
 
 X_train, X_test, y_train, y_test = train_test_split(
     X_scaled, y_severity, test_size=0.2, random_state=RANDOM_SEED, stratify=y_severity
 )
 
-print("Tuning k (3–15, odd values)...")
+print("Tuning k (3-15, odd values)...")
 k_values = range(3, 16, 2)
 cv_scores = []
 for k in k_values:
@@ -57,7 +52,6 @@ print("\nClassification Report:")
 print(classification_report(y_test, y_pred, target_names=label_names))
 
 fig, axes = plt.subplots(1, 2, figsize=(14, 5))
-
 axes[0].plot(list(k_values), cv_scores, marker="o", color="#2E86AB", linewidth=2)
 axes[0].axvline(best_k, color="red", linestyle="--", label=f"Best k={best_k}")
 axes[0].set_xlabel("k (number of neighbours)", fontsize=12)
@@ -72,7 +66,6 @@ sns.heatmap(cm, annot=True, fmt="d", cmap="Blues",
 axes[1].set_xlabel("Predicted", fontsize=12)
 axes[1].set_ylabel("Actual", fontsize=12)
 axes[1].set_title(f"kNN Confusion Matrix (k={best_k})", fontsize=14)
-
 plt.tight_layout()
 plt.savefig("outputs/knn/knn_results.png", dpi=150, bbox_inches="tight")
 plt.close()

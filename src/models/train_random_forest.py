@@ -136,6 +136,36 @@ plt.tight_layout()
 plt.savefig(fi_path, dpi=150)
 plt.close()
 
+# -----------------------------
+# Learning Curve (train vs val)
+# -----------------------------
+print("Plotting learning curve...")
+from sklearn.model_selection import learning_curve
+
+train_sizes, train_scores, val_scores = learning_curve(
+    rf, X_train, y_train,
+    train_sizes=np.linspace(0.1, 1.0, 6),
+    cv=3, scoring="accuracy",
+    n_jobs=-1, random_state=RANDOM_SEED
+)
+
+train_mean = train_scores.mean(axis=1)
+val_mean   = val_scores.mean(axis=1)
+
+plt.figure(figsize=(8, 5))
+plt.plot(train_sizes, train_mean, marker="o", label="Train Accuracy", color="#2E86AB")
+plt.plot(train_sizes, val_mean,   marker="o", label="Val Accuracy",   color="#E84855")
+plt.xlabel("Training Set Size", fontsize=12)
+plt.ylabel("Accuracy", fontsize=12)
+plt.title("Random Forest Learning Curve", fontsize=14)
+plt.legend(fontsize=11)
+plt.grid(True, alpha=0.3)
+plt.tight_layout()
+lc_path = f"{OUTPUT_DIR}/learning_curve.png"
+plt.savefig(lc_path, dpi=150)
+plt.close()
+print("Saved:", lc_path) 
+
 print("Saved:", fi_path)
 
 print("Plotting accuracy vs number of trees...")
