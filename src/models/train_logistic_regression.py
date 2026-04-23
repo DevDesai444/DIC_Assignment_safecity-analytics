@@ -76,7 +76,7 @@ print(f"Avg Precision : {ap:.4f}")
 print("\nClassification Report:")
 print(classification_report(y_test, y_pred, target_names=["No Weapon", "Weapon"]))
 
-fig, axes = plt.subplots(1, 3, figsize=(20, 6))
+fig, axes = plt.subplots(1, 4, figsize=(24, 6))
 
 cm = confusion_matrix(y_test, y_pred)
 sns.heatmap(cm, annot=True, fmt="d", cmap="Blues",
@@ -102,6 +102,16 @@ axes[2].axvline(0, color="black", linewidth=0.8)
 axes[2].set_title("Feature Coefficients\n(red=increases weapon risk)", fontsize=12)
 axes[2].set_xlabel("Coefficient Value", fontsize=11)
 axes[2].grid(True, alpha=0.3, axis="x")
+
+# Precision-Recall Curve
+prec, rec, _ = precision_recall_curve(y_test, y_prob)
+axes[3].plot(rec, prec, color="#52B788", linewidth=2, label=f"AP = {ap:.3f}")
+axes[3].axhline(y_test.mean(), color="gray", linestyle="--", linewidth=1, label="Baseline")
+axes[3].set_xlabel("Recall", fontsize=11)
+axes[3].set_ylabel("Precision", fontsize=11)
+axes[3].set_title("Precision-Recall Curve", fontsize=13)
+axes[3].legend(fontsize=11)
+axes[3].grid(True, alpha=0.3)
 
 plt.tight_layout()
 plt.savefig("outputs/logistic_regression/lr_results.png", dpi=150, bbox_inches="tight")
