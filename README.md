@@ -21,6 +21,8 @@
 | **Phase 1 Workshop Slides** | `LA_Crime_Data_Analysis.pptx` |
 | **Phase 2 Report (Google Doc)** | [View Report](https://docs.google.com/document/d/10sJOqEEXB30xsa94dIkb-TCN8guEs0muV1l9IHjfs6g/edit?tab=t.0) |
 | **Phase 2 Workshop Slides** | `LA_Crime_Data_Analysis.pptx` |
+| **Phase 3 Report (Google Doc)** | [View Report](https://docs.google.com/document/d/1DYWHYWxX1tqeKoY19AvVmRuRjts-9Jhkl3FwlD8IBaY/edit?tab=t.0) |
+| **Phase 3 Workshop Slides** | `LA_Crime_Data_Analysis.pptx` |
 
 ---
 
