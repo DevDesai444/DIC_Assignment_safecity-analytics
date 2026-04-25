@@ -3,7 +3,7 @@
 ## Course + Assignment Header
 - **Subject Code:** EAS 587  
 - **Course:** Data-Intensive Computing (Spring 2026)  
-- **Assignment No.:** Project Phase 1 & Phase 2  
+- **Assignment No.:** Project Phase 1, Phase 2 & Phase 3
 - **Project Title:** SafeCity Analytics: LA Crime Data Analysis  
 - **Instructor:** Dr. Justice Del Vacio  
 - **Team Members:**  
@@ -89,47 +89,35 @@ DIC_Assignment_safecity-analytics/
 │   ├── raw/
 │   │   └── crime_data_2024_to_present.csv
 │   └── processed/
-│       └── crime_data_cleaned.csv            ← Phase 1 output / Phase 2 input
+│       └── crime_data_cleaned.csv
 ├── src/
 │   ├── data_cleaning.py                      ← Phase 1: data cleaning pipeline
 │   ├── eda.py                                ← Phase 1: exploratory data analysis
-│   └── models/                               ← Phase 2: ML algorithms
-│       ├── preprocess.py                     ← shared feature engineering
-│       ├── train_knn.py                      ← Algorithm 1: k-NN
-│       ├── train_decision_tree.py            ← Algorithm 2: Decision Tree
-│       ├── train_kmeans.py                   ← Algorithm 3: k-Means
-│       ├── train_naive_bayes.py              ← Algorithm 4: Naive Bayes
-│       ├── train_random_forest.py            ← Algorithm 5: Random Forest (outside class)
-│       ├── train_logistic_regression.py      ← Algorithm 6: Logistic Regression (outside class)
-│       └── compare_algorithms.py             ← head-to-head algorithm comparison
-├── src/mcp/                                  ← Phase 2: MCP deployment
-│   ├── server.py
-│   └── README.md
+│   ├── models/                               ← Phase 2: ML algorithms
+│   │   ├── preprocess.py
+│   │   ├── train_knn.py
+│   │   ├── train_decision_tree.py
+│   │   ├── train_kmeans.py
+│   │   ├── train_naive_bayes.py
+│   │   ├── train_random_forest.py
+│   │   ├── train_logistic_regression.py
+│   │   └── compare_algorithms.py
+│   └── mcp/                                  ← Phase 2: MCP deployment
+│       ├── server.py
+│       └── README.md
+├── notebooks/
+│   └── databricks/                           ← Phase 3: Databricks notebooks
+│       ├── 01_lapd_bronze.ipynb              ← Bronze: LAPD primary data
+│       ├── 02_lapd_silver.ipynb              ← Silver: clean + transform
+│       ├── 03_lapd_gold.ipynb                ← Gold: business aggregates
+│       ├── 04_lapd_mllib.ipynb               ← MLlib: Decision Tree + Naive Bayes
+│       ├── 05_nibrs_bronze.ipynb             ← Bronze: NIBRS extra data source
+│       ├── 06_nibrs_silver_combined.ipynb    ← Silver: join LAPD + NIBRS
+│       ├── 07_nibrs_insights.ipynb           ← 3 insights from combined data
+│       └── 08_nibrs_mllib.ipynb              ← MLlib: weapon prediction (both sources)
 ├── models/                                   ← Phase 2: serialized trained models
-│   ├── knn_model.pkl
-│   ├── decision_tree_model.pkl
-│   ├── kmeans_model.pkl
-│   ├── naive_bayes_model.pkl
-│   ├── random_forest_model.pkl
-│   └── logistic_regression_model.pkl
-├── outputs/                                  ← Phase 2: plots and metrics CSVs
-│   ├── knn/
-│   ├── decision_tree/
-│   ├── kmeans/
-│   ├── naive_bayes/
-│   ├── random_forest/
-│   ├── logistic_regression/
-│   └── comparison/
+├── outputs/                                  ← Phase 2: plots and metrics
 └── figures/                                  ← Phase 1: EDA visualizations
-    ├── temporal_patterns.png
-    ├── geographic_distribution.png
-    ├── victim_demographics.png
-    ├── crime_type_analysis.png
-    ├── reporting_patterns.png
-    ├── cross_tabulation.png
-    ├── correlation_matrix.png
-    ├── outlier_detection.png
-    └── weapon_analysis.png
 ```
 
 ---
@@ -431,6 +419,21 @@ We chose ComplementNB over GaussianNB for the Naive Bayes model because it's des
 For k-Means, we used both the elbow method and silhouette score together. The elbow method alone often gives ambiguous results; the silhouette score adds a measure of actual cluster separation, which helped us pick a k that was both efficient and meaningful.
 
 ---
+
+### Runing Phase 3 (Databricks / Spark MLlib)
+
+Phase 3 runs on Databricks. Import the notebooks from `notebooks/databricks/` and run them in order:
+
+| Order | Notebook | What it does |
+|---|---|---|
+| 1 | `01_lapd_bronze.ipynb` | Ingest primary LAPD crime CSV → `bronze_mydata` Delta table |
+| 2 | `02_lapd_silver.ipynb` | Clean + transform → `silver_mydata` Delta table |
+| 3 | `03_lapd_gold.ipynb` | Business aggregates → 6 gold Delta tables |
+| 4 | `04_lapd_mllib.ipynb` | MLlib models (Decision Tree, Naive Bayes) on primary data |
+| 5 | `05_nibrs_bronze.ipynb` | Ingest NIBRS Victims + Offenses CSVs → bronze Delta tables |
+| 6 | `06_nibrs_silver_combined.ipynb` | Join LAPD + NIBRS → `silver_lapd_crimes` Delta table |
+| 7 | `07_nibrs_insights.ipynb` | 3 insights from combined data |
+| 8 | `08_nibrs_mllib.ipynb` | Logistic Regression using features from both sources |
 
 ## Reproducibility
 
