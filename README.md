@@ -82,18 +82,22 @@ claude mcp get safecity-crime-predictor
 ## Repository Structure
 
 ```text
-DIC_Assignment_safecity-analytics/
+safecity-analytics/
 ├── README.md
 ├── requirements.txt
-├── data/
-│   ├── raw/
-│   │   └── crime_data_2024_to_present.csv
-│   └── processed/
-│       └── crime_data_cleaned.csv
-├── src/
-│   ├── data_cleaning.py                      ← Phase 1: data cleaning pipeline
-│   ├── eda.py                                ← Phase 1: exploratory data analysis
-│   ├── models/                               ← Phase 2: ML algorithms
+├── .gitattributes
+├── .gitignore
+├── .mcp.json
+├── LA_Crime_Data_Analysis.pptx
+├── safecity_workshop_slides_phase_2.pptx
+├── data/                                     ← Phase 1: raw and processed data
+├── figures/                                  ← Phase 1: EDA visualizations
+├── models/                                   ← Phase 2: serialized trained models
+├── outputs/                                  ← Phase 2: plots and metrics CSVs
+├── src/                                      ← Phase 1 & 2: source code
+│   ├── data_cleaning.py
+│   ├── eda.py
+│   ├── models/
 │   │   ├── preprocess.py
 │   │   ├── train_knn.py
 │   │   ├── train_decision_tree.py
@@ -102,22 +106,25 @@ DIC_Assignment_safecity-analytics/
 │   │   ├── train_random_forest.py
 │   │   ├── train_logistic_regression.py
 │   │   └── compare_algorithms.py
-│   └── mcp/                                  ← Phase 2: MCP deployment
+│   └── mcp/
 │       ├── server.py
 │       └── README.md
 ├── notebooks/
 │   └── databricks/                           ← Phase 3: Databricks notebooks
-│       ├── 01_lapd_bronze.ipynb              ← Bronze: LAPD primary data
-│       ├── 02_lapd_silver.ipynb              ← Silver: clean + transform
-│       ├── 03_lapd_gold.ipynb                ← Gold: business aggregates
-│       ├── 04_lapd_mllib.ipynb               ← MLlib: Decision Tree + Naive Bayes
-│       ├── 05_nibrs_bronze.ipynb             ← Bronze: NIBRS extra data source
-│       ├── 06_nibrs_silver_combined.ipynb    ← Silver: join LAPD + NIBRS
-│       ├── 07_nibrs_insights.ipynb           ← 3 insights from combined data
-│       └── 08_nibrs_mllib.ipynb              ← MLlib: weapon prediction (both sources)
-├── models/                                   ← Phase 2: serialized trained models
-├── outputs/                                  ← Phase 2: plots and metrics
-└── figures/                                  ← Phase 1: EDA visualizations
+│       ├── 01_lapd_bronze.ipynb
+│       ├── 02_lapd_silver.ipynb
+│       ├── 03_lapd_gold.ipynb
+│       ├── 04_lapd_mllib.ipynb
+│       ├── 05_nibrs_bronze.ipynb
+│       ├── 06_nibrs_silver_combined.ipynb
+│       ├── 07_nibrs_insights.ipynb
+│       └── 08_nibrs_mllib.ipynb
+└── part2_phase3_databrick_model/             ← Phase 3: saved MLlib pipeline model
+    ├── metadata/
+    └── stages/
+        ├── 0_VectorAssembler_.../
+        ├── 1_StandardScaler_.../
+        └── 2_LogisticRegression_.../
 ```
 
 ---
